@@ -1,0 +1,50 @@
+[build-system]
+requires = [
+    "meson-python>=0.15",
+    "meson>=1.2.0",
+    "ninja",
+    "numpy>=1.26",
+]
+build-backend = "mesonpy"
+
+[project]
+name = "hierarchical-hotnet"
+version = "0.2.0"
+description = "Hierarchical HotNet: identifying hierarchies of altered subnetworks."
+readme = "README.md"
+license = { file = "LICENSE.txt" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Raphael Group" },
+]
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.10",
+    "networkx>=3.0",
+    "h5py>=3.0",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.5"]
+
+[project.urls]
+Source = "https://github.com/raphael-group/hierarchical-hotnet"
+
+[project.scripts]
+hhnet-construct-similarity-matrix = "hierarchical_hotnet.construct_similarity_matrix:main"
+hhnet-construct-hierarchy        = "hierarchical_hotnet.construct_hierarchy:main"
+hhnet-find-permutation-bins      = "hierarchical_hotnet.find_permutation_bins:main"
+hhnet-permute-scores             = "hierarchical_hotnet.permute_scores:main"
+hhnet-permute-network            = "hierarchical_hotnet.permute_network:main"
+hhnet-process-hierarchies        = "hierarchical_hotnet.process_hierarchies:main"
+hhnet-perform-consensus          = "hierarchical_hotnet.perform_consensus:main"
+hhnet-generate-example-graph     = "hierarchical_hotnet.generate_example_graph:main"

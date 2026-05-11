@@ -152,7 +152,7 @@ def load_matrix(filename, matrix_name='PPR'):
 
     f = h5py.File(filename, 'r')
     if matrix_name in f:
-        A = np.asarray(f[matrix_name].value, dtype=np.float32)
+        A = np.asarray(f[matrix_name][()], dtype=np.float32)
     else:
         raise KeyError('Matrix {} is not in {}.'.format(matrix_name, filename))
     f.close()

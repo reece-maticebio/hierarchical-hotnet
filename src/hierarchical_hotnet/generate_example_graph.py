@@ -4,7 +4,7 @@
 import math
 import sys, argparse
 
-from hhio import save_index_gene, save_edge_list, save_gene_score
+from hierarchical_hotnet.hhio import save_index_gene, save_edge_list, save_gene_score
 
 # Parse arguments.
 def get_parser():
@@ -111,5 +111,8 @@ def run(args):
 
         plt.savefig(args.plot_file, bbox_inches='tight')
 
+def main():
+    run(get_parser().parse_args())
+
 if __name__ == "__main__":
-    run(get_parser().parse_args(sys.argv[1:]))
+    main()

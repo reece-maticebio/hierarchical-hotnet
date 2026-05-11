@@ -4,9 +4,9 @@ import math, numpy as np
 from collections import defaultdict
 
 try:
-    import fortran_module
+    from hierarchical_hotnet import fortran_module
     imported_fortran_module = True
-except:
+except ImportError:
     imported_fortran_module = False
 
 ####################################################################################################################################
@@ -165,7 +165,7 @@ def index_vertices(vertices, indices):
 
 def slice_array(A, rows, columns):
     if imported_fortran_module:
-        return fortran_module.slice_array(A, np.array(columns, dtype=np.int)+1, np.array(rows, dtype=np.int)+1)
+        return fortran_module.slice_array(A, np.array(columns, dtype=np.int64)+1, np.array(rows, dtype=np.int64)+1)
     else:
         return A[np.ix_(rows,columns)]
 
@@ -186,7 +186,7 @@ def strongly_connected_components_from_adjacency_matrix(A):
 
     index = -np.ones(n, dtype=np.int64)
     lowlink = -np.ones(n, dtype=np.int64)
-    found = np.zeros(n, dtype=np.bool)
+    found = np.zeros(n, dtype=bool)
     queue = np.zeros(n, dtype=np.int64)
     subqueue = np.zeros(n, dtype=np.int64)
     component = np.zeros(n, dtype=np.int64)

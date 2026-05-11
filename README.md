@@ -5,41 +5,42 @@ Hierarchical HotNet is an algorithm for finding hierarchies of altered subnetwor
 
 Setup
 ------------------------
-The setup process for Hierarchical HotNet requires the following steps:
+Hierarchical HotNet is installable as a Python package. The Fortran extension
+is built automatically by `pip` via the `meson-python` build backend; a Python-
+only fallback is used if no Fortran compiler is available.
 
-### Download
-Download Hierarchical HotNet.  The following command clones the current Hierarchical HotNet repository from GitHub:
+### Requirements
+* Python &ge; 3.10 (tested on 3.12)
+* A Fortran compiler such as [gfortran](https://gcc.gnu.org/wiki/GFortran) (recommended for performance)
+* [GNU parallel](https://www.gnu.org/software/parallel/) (optional, for the parallel example script)
+
+Runtime dependencies (`numpy`, `scipy`, `networkx`, `h5py`) are installed
+automatically. `matplotlib` is an optional extra used by the plotting steps.
+
+### Install
+Clone the repository and install with `pip`:
 
     git clone https://github.com/raphael-group/hierarchical-hotnet.git
+    cd hierarchical-hotnet
+    pip install .            # core install
+    pip install '.[plot]'    # with matplotlib for plotting
 
-### Installation
-The following software is either required for Hierarchical HotNet or optional but recommended for better performance or for visualizations.
+Installation exposes the following CLI commands:
 
-##### Required
-* Linux/Unix
-* [Python (2.7 or 3.5)](http://python.org/)
-* [NumPy (1.14)](http://www.numpy.org/)
-* [SciPy (0.19)](http://www.scipy.org/)
-* [NetworkX (1.11)](http://networkx.github.io/)
-* [h5py (2.7)](http://www.h5py.org/)
+* `hhnet-construct-similarity-matrix`
+* `hhnet-construct-hierarchy`
+* `hhnet-find-permutation-bins`
+* `hhnet-permute-scores`
+* `hhnet-permute-network`
+* `hhnet-process-hierarchies`
+* `hhnet-perform-consensus`
+* `hhnet-generate-example-graph`
 
-##### Optional, but recommended
-* A Fortran compiler, e.g., [gfortran 5.4](https://gcc.gnu.org/wiki/GFortran)
-* [virtualenv](https://virtualenv.pypa.io/en/stable/)
-* [GNU parallel](https://www.gnu.org/software/parallel/)
-* [Matplotlib (2.1)](http://matplotlib.org/)
+The library itself is importable as `hierarchical_hotnet`.
 
-Most likely, Hierarchical HotNet will work with other versions of the above software.
-
-In particular, both [virtualenv](https://virtualenv.pypa.io/en/stable/) and [GNU parallel](https://www.gnu.org/software/parallel/) are recommended in practice.  Virtualenv provides a virtual environment that allows Python packages to be installed or updated independently of the system packages.  GNU parallel facilitates running many scripts in parallel.  We highly recommend running Hierarchical HotNet in parallel.
-
-### Compilation
-Install a Fortran compiler, such as [gfortran](https://gcc.gnu.org/wiki/GFortran), for better performance.  The following command compiles the optional Fortan code used in Hierarchical HotNet:
-
-    cd src
-    f2py -c fortran_module.f95 -m fortran_module > /dev/null
-
-We highly recommend using the Fortran code for better performance.  However, Hierarchical HotNet will transparently fall back to a Python-only implementation if a Fortran compiler is unavailable or if compilation is unsuccessful.
+If no Fortran compiler is found at build time the install still succeeds and
+the package falls back to the pure-Python implementation, which is slower but
+otherwise equivalent.
 
 ### Testing
 To test Hierarchical HotNet on an example network with two sets of example scores, please run the following script:
@@ -81,17 +82,17 @@ This file associates each gene with a score:
 ### Running
 Hierarchical HotNet has several steps:
 
-1. Create a similarity matrix by running the `src/create_similarity_matrix.py` script.
+1. Create a similarity matrix with `hhnet-construct-similarity-matrix`.
 
-2. Create permuted data by running the `src/find_permutation_bins.py` and `src/permute_scores.py` scripts (permuted scores) or the `src/permute_networks.py` script (permuted networks).  In general, it is faster to permute scores than networks.
+2. Create permuted data with `hhnet-find-permutation-bins` and `hhnet-permute-scores` (permuted scores), or with `hhnet-permute-network` (permuted networks). In general, permuting scores is faster than permuting networks.
 
-3. Construct hierarchies on observed and permuted data by running the `src/construct_hierarchies.py` script.
+3. Construct hierarchies on observed and permuted data with `hhnet-construct-hierarchy`.
 
-4. Process the hierarchies by running the `src/process_hierarchies.py` script.
+4. Process the hierarchies with `hhnet-process-hierarchies`.
 
-5. Perform the consensus summarization procedure on the results by running the `src/perform_consensus.py` script.
+5. Perform the consensus summarization with `hhnet-perform-consensus`.
 
-See `examples/example_commands.sh` or `examples/example_commands_parallel.sh` for full minimal working examples of Hierarchical HotNet that illustrate the use of each of these scripts, including the inputs and outputs for the Hierarchical HotNet pipeline.
+See `examples/example_commands.sh` or `examples/example_commands_parallel.sh` for full minimal working examples of Hierarchical HotNet that illustrate the use of each of these commands, including the inputs and outputs for the Hierarchical HotNet pipeline.
 
 ### Output
 Hierarchical HotNet identifies statistically significant regions of a hierarchical clustering of topologically close, high-scoring genes.  Hierarchical HotNet also performs a consensus across hierarchical clusterings from different networks and gene scores.

@@ -2,8 +2,8 @@
 
 import math, numpy as np
 
-from hierarchical_clustering import *
-from hhio import progress
+from hierarchical_hotnet.hierarchical_clustering import *
+from hierarchical_hotnet.hhio import progress
 
 ####################################################################################################################################
 #
@@ -65,7 +65,7 @@ def edges_to_adjacency_matrix(edges):
 
     weight_type = set(type(edge[2]) for edge in edges if len(edge)>2)
     if weight_type==set([int]):
-        dtype = np.int
+        dtype = np.int64
     else:
         dtype = np.float64
 
@@ -121,7 +121,7 @@ def random_adjacency_matrix(n,seed=np.random.randint(0,4294967295),sparsity=0.0,
         # the correct dimensions.
 
         B = np.random.rand(unique_elements)
-        C = np.zeros(n**2-unique_elements,dtype=np.float)
+        C = np.zeros(n**2-unique_elements,dtype=np.float64)
 
         tally = 0
         while tally<repeated_elements:
