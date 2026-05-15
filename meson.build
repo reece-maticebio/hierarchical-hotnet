@@ -62,3 +62,12 @@ py.install_sources(
   ],
   subdir: 'hierarchical_hotnet',
 )
+
+py.install_sources(
+  [
+    'src/hierarchical_hotnet/storage/__init__.py',
+    'src/hierarchical_hotnet/storage/base.py',
+    'src/hierarchical_hotnet/storage/memory.py',
+  ],
+  subdir: 'hierarchical_hotnet/storage',
+)
