@@ -2,7 +2,7 @@
 
 import numpy as np
 import scipy as sp
-from hierarchical_hotnet.common import hh_similarity_matrix
+from hierarchical_hotnet.core.common import hh_similarity_matrix
 
 
 def _difference(A, beta, threshold):

@@ -3,7 +3,7 @@
 from typing import Optional
 
 import numpy as np
-from hierarchical_hotnet._parallel import maybe_pool
+from hierarchical_hotnet.parallel import maybe_pool
 from hierarchical_hotnet.storage import Store
 
 

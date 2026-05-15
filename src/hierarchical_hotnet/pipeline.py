@@ -30,17 +30,17 @@ from typing import Optional
 
 import numpy as np
 
-from hierarchical_hotnet.construct_hierarchy import construct_hierarchies
-from hierarchical_hotnet.construct_similarity_matrix import compute_similarity_matrix
+from hierarchical_hotnet.core.hierarchy import construct_hierarchies
+from hierarchical_hotnet.core.similarity import compute_similarity_matrix
 from hierarchical_hotnet.file_io import load_matrix, save_matrix
-from hierarchical_hotnet.find_permutation_bins import compute_permutation_bins
-from hierarchical_hotnet.perform_consensus import (
+from hierarchical_hotnet.core.bins import compute_permutation_bins
+from hierarchical_hotnet.core.consensus import (
     ConsensusInput,
     ConsensusResult,
     perform_consensus,
 )
-from hierarchical_hotnet.permute_scores import permute_scores_many
-from hierarchical_hotnet.process_hierarchies import (
+from hierarchical_hotnet.core.permute_scores import permute_scores_many
+from hierarchical_hotnet.core.process_hierarchies import (
     ProcessHierarchiesResult,
     process_hierarchies,
 )

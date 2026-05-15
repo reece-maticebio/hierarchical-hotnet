@@ -2,7 +2,7 @@
 
 import argparse
 from hierarchical_hotnet.file_io import load_gene_score, load_index_gene, load_matrix, save_edge_list, save_index_gene
-from hierarchical_hotnet.construct_hierarchy import construct_hierarchy
+from hierarchical_hotnet.core.hierarchy import construct_hierarchy
 
 
 def get_parser():

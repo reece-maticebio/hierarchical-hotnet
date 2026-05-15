@@ -4,9 +4,9 @@ import math
 from typing import Optional
 
 import numpy as np
-from hierarchical_hotnet._parallel import maybe_pool
-from hierarchical_hotnet.common import combined_similarity_matrix
-from hierarchical_hotnet.hierarchical_clustering import strongly_connected_components, tarjan_HD
+from hierarchical_hotnet.parallel import maybe_pool
+from hierarchical_hotnet.core.common import combined_similarity_matrix
+from hierarchical_hotnet.core.clustering import strongly_connected_components, tarjan_HD
 from hierarchical_hotnet.storage import Store
 
 

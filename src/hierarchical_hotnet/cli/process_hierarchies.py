@@ -2,7 +2,7 @@
 
 import argparse
 from hierarchical_hotnet.file_io import load_edge_list, load_index_gene, progress
-from hierarchical_hotnet.process_hierarchies import plot_cluster_sizes, process_hierarchies
+from hierarchical_hotnet.core.process_hierarchies import plot_cluster_sizes, process_hierarchies
 
 
 def get_parser():

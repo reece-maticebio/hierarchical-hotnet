@@ -2,7 +2,7 @@
 
 import argparse
 from hierarchical_hotnet.file_io import load_edge_list, save_matrix
-from hierarchical_hotnet.construct_similarity_matrix import compute_similarity_matrix
+from hierarchical_hotnet.core.similarity import compute_similarity_matrix
 
 
 def get_parser():

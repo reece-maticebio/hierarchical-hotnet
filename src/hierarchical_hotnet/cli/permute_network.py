@@ -2,7 +2,7 @@
 
 import argparse
 from hierarchical_hotnet.file_io import load_edge_list, save_edge_list
-from hierarchical_hotnet.permute_network import permute_network
+from hierarchical_hotnet.core.permute_network import permute_network
 
 
 def get_parser():

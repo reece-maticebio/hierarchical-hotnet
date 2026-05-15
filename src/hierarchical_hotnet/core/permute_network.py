@@ -3,7 +3,7 @@
 import math
 import random
 import networkx as nx
-from hierarchical_hotnet._parallel import maybe_pool
+from hierarchical_hotnet.parallel import maybe_pool
 
 
 def permute_network(edges, *, seed=None, preserve_connectivity=False, Q=100):

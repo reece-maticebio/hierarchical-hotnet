@@ -2,16 +2,16 @@
 
 __version__ = "0.2.0"
 
-from hierarchical_hotnet.construct_similarity_matrix import compute_similarity_matrix
-from hierarchical_hotnet.find_permutation_bins import compute_permutation_bins
-from hierarchical_hotnet.permute_scores import permute_scores, permute_scores_many
-from hierarchical_hotnet.permute_network import permute_network, permute_network_many
-from hierarchical_hotnet.construct_hierarchy import construct_hierarchy, construct_hierarchies
-from hierarchical_hotnet.process_hierarchies import (
+from hierarchical_hotnet.core.similarity import compute_similarity_matrix
+from hierarchical_hotnet.core.bins import compute_permutation_bins
+from hierarchical_hotnet.core.permute_scores import permute_scores, permute_scores_many
+from hierarchical_hotnet.core.permute_network import permute_network, permute_network_many
+from hierarchical_hotnet.core.hierarchy import construct_hierarchy, construct_hierarchies
+from hierarchical_hotnet.core.process_hierarchies import (
     process_hierarchies,
     ProcessHierarchiesResult,
 )
-from hierarchical_hotnet.perform_consensus import (
+from hierarchical_hotnet.core.consensus import (
     perform_consensus,
     ConsensusInput,
     ConsensusResult,

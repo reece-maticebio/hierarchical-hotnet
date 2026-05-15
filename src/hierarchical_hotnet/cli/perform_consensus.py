@@ -2,7 +2,7 @@
 
 import argparse
 from hierarchical_hotnet.file_io import load_edge_list, load_index_gene, progress
-from hierarchical_hotnet.perform_consensus import ConsensusInput, load_components, perform_consensus
+from hierarchical_hotnet.core.consensus import ConsensusInput, load_components, perform_consensus
 
 
 def get_parser():

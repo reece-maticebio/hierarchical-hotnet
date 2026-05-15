@@ -15,7 +15,7 @@ import networkx as nx
 import numpy as np
 import pytest
 
-from hierarchical_hotnet.hierarchical_clustering import (
+from hierarchical_hotnet.core.clustering import (
     find_height_to_clusters,
     tarjan_HD,
 )

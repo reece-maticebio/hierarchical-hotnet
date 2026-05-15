@@ -7,8 +7,8 @@ the store keyed by seed (for permute_scores) or input index (for hierarchies).
 
 import pytest
 
-from hierarchical_hotnet.construct_hierarchy import construct_hierarchies
-from hierarchical_hotnet.permute_scores import permute_scores_many
+from hierarchical_hotnet.core.hierarchy import construct_hierarchies
+from hierarchical_hotnet.core.permute_scores import permute_scores_many
 from hierarchical_hotnet.storage import MemoryStore
 
 
@@ -20,7 +20,7 @@ def tiny_inputs():
     """Minimal inputs for construct_hierarchies and permute_scores_many."""
     import numpy as np
 
-    from hierarchical_hotnet.construct_similarity_matrix import compute_similarity_matrix
+    from hierarchical_hotnet.core.similarity import compute_similarity_matrix
 
     edges = [(1, 2, 1.0), (2, 3, 1.0), (3, 1, 1.0), (3, 4, 1.0), (4, 3, 1.0)]
     P, _ = compute_similarity_matrix(edges, beta=0.4)

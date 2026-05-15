@@ -2,7 +2,7 @@
 
 import argparse
 from hierarchical_hotnet.file_io import load_gene_score, save_gene_score
-from hierarchical_hotnet.permute_scores import load_bins, permute_scores
+from hierarchical_hotnet.core.permute_scores import load_bins, permute_scores
 
 
 def get_parser():
