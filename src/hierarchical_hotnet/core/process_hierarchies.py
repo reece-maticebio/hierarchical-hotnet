@@ -4,14 +4,8 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 import numpy as np
+from hierarchical_hotnet import backends
 from hierarchical_hotnet.file_io import load_edge_list, load_index_gene
-
-
-try:
-    from hierarchical_hotnet import fortran_module
-    imported_fortran_module = True
-except ImportError:
-    imported_fortran_module = False
 
 
 def compute_statistic(sizes):
@@ -64,36 +58,11 @@ def _statistics_worker_from_files(args):
 
 def summarize_cluster_sizes(permuted_heights_collection, permuted_sizes_collection):
     """Aggregate min/mean/max cluster size across permutations at each height."""
-    num_permutations = len(permuted_heights_collection)
     distinct_heights = np.unique(np.concatenate(permuted_heights_collection))[::-1]
-    num_distinct_heights = len(distinct_heights)
     max_indices = np.array([len(h) for h in permuted_heights_collection], dtype=np.int64)
-    if imported_fortran_module:
-        max_index = int(np.max(max_indices))
-        heights = np.zeros((num_permutations, max_index))
-        sizes = np.zeros((num_permutations, max_index))
-        for i in range(num_permutations):
-            heights[i, :max_indices[i]] = permuted_heights_collection[i]
-            sizes[i, :max_indices[i]] = permuted_sizes_collection[i]
-        summary_sizes = fortran_module.summarize_sizes(distinct_heights, heights, sizes, max_indices)
-        min_sizes = summary_sizes[:, 0]
-        expected_sizes = summary_sizes[:, 1]
-        max_sizes = summary_sizes[:, 2]
-    else:
-        cur_indices = np.zeros(num_permutations, dtype=np.int64)
-        cur_sizes = np.zeros(num_permutations)
-        min_sizes = np.zeros(num_distinct_heights)
-        expected_sizes = np.zeros(num_distinct_heights)
-        max_sizes = np.zeros(num_distinct_heights)
-        for k in range(num_distinct_heights):
-            distinct_height = distinct_heights[k]
-            for i in range(num_permutations):
-                while cur_indices[i] < max_indices[i] - 1 and permuted_heights_collection[i][cur_indices[i] + 1] >= distinct_height:
-                    cur_indices[i] += 1
-                cur_sizes[i] = permuted_sizes_collection[i][cur_indices[i]]
-            min_sizes[k] = np.min(cur_sizes)
-            expected_sizes[k] = np.mean(cur_sizes)
-            max_sizes[k] = np.max(cur_sizes)
+    min_sizes, expected_sizes, max_sizes = backends.summarize_sizes(
+        distinct_heights, permuted_heights_collection, permuted_sizes_collection, max_indices,
+    )
     return (distinct_heights, min_sizes, expected_sizes, max_sizes)
 
 

@@ -1,22 +1,9 @@
 #!/usr/bin/python
 
-import logging
 import math, numpy as np
 from collections import defaultdict
 
-logger = logging.getLogger(__name__)
-
-try:
-    from hierarchical_hotnet import fortran_module
-    imported_fortran_module = True
-    logger.info("hierarchical_hotnet: using Fortran backend for clustering")
-except ImportError:
-    imported_fortran_module = False
-    logger.warning(
-        "hierarchical_hotnet: Fortran backend unavailable; falling back to "
-        "pure-Python clustering (slow). Rebuild the package with a working "
-        "Fortran toolchain to enable the fast path."
-    )
+from hierarchical_hotnet import backends
 
 ####################################################################################################################################
 #
@@ -29,12 +16,8 @@ def tarjan_HD(A, reverse=True, verbose=False):
     Compute the hierarchical decomposition of a graph into strongly connected components using Tarjan's algorithm (1983).
     This function is the driver function for the implementation of this algorithm.
     '''
-    # Check for Fortran module:
     if verbose:
-        if imported_fortran_module:
-            print('- Fortran module imported successfully...')
-        else:
-            print('- Fortran module not imported successfully; falling back to Python-only functions...')
+        print(f'- Clustering backend: {backends.BACKEND}')
 
     # Initialize variables.
     n = np.shape(A)[0]
@@ -144,118 +127,24 @@ def tarjan_HD_recursive(V, A, T, i, root):
             return tarjan_HD_recursive(Y, B, T, k, root)
 
 def condense_graph(A, components):
-    if imported_fortran_module:
-        n = len(components)
-        nodes = np.array([i for component in components for i in component], dtype=np.int64)
-        sizes = np.array([len(component) for component in components], dtype=np.int64)
-        indices = np.array([np.sum(sizes[:i]) for i in range(n+1)], dtype=np.int64)
-        return fortran_module.condense_adjacency_matrix(A, nodes+1, indices+1)
-    else:
-        n = len(components)
-        B = np.zeros((n, n), dtype=A.dtype)
-        for i in range(n):
-             for j in range(n):
-                if i!=j:
-                    C = slice_array(A, components[j], components[i])
-                    nonzero_indices = np.nonzero(C)
-                    if np.size(nonzero_indices)>0:
-                        B[i, j] = np.min(C[nonzero_indices])
-        return B
+    return backends.condense_adjacency_matrix(A, components)
 
 def find_distinct_weights(A):
-    if imported_fortran_module:
-        B, l = fortran_module.unique_entries(A)
-        return B[:l]
-    else:
-        return np.unique(A)
+    return backends.find_distinct_weights(A)
 
 def index_vertices(vertices, indices):
     return [vertices[index] for index in indices]
 
 def slice_array(A, rows, columns):
-    if imported_fortran_module:
-        return fortran_module.slice_array(A, np.array(columns, dtype=np.int64)+1, np.array(rows, dtype=np.int64)+1)
-    else:
-        return A[np.ix_(rows,columns)]
+    return backends.slice_array(A, rows, columns)
 
 def strongly_connected_components(A):
-    if imported_fortran_module:
-        indices = fortran_module.strongly_connected_components(A)
-    else:
-        indices = strongly_connected_components_from_adjacency_matrix(A)
-
+    """Return the SCCs of ``A`` as a list of component lists (0-indexed nodes)."""
+    indices = backends.strongly_connected_components_labels(A)
     index_to_component = defaultdict(list)
     for i, j in enumerate(indices):
         index_to_component[j].append(i)
     return list(index_to_component.values())
-
-def strongly_connected_components_from_adjacency_matrix(A):
-    m, n = np.shape(A)
-    nodes = range(n)
-
-    index = -np.ones(n, dtype=np.int64)
-    lowlink = -np.ones(n, dtype=np.int64)
-    found = np.zeros(n, dtype=bool)
-    queue = np.zeros(n, dtype=np.int64)
-    subqueue = np.zeros(n, dtype=np.int64)
-    component = np.zeros(n, dtype=np.int64)
-
-    neighbors = np.zeros((n, n), dtype=np.int64)
-    degree = np.zeros(n, dtype=np.int64)
-    for v in nodes:
-        neighbors_v = np.where(A[v]>0)[0]
-        degree_v = np.size(neighbors_v)
-        neighbors[v, 0:degree_v] = neighbors_v
-        degree[v] = degree_v
-
-    i = 0
-    j = 0
-    k = 0
-    l = 0
-
-    for u in nodes:
-        if not found[u]:
-            queue[k] = u
-            k += 1
-
-            while k>=1:
-                v = queue[k-1]
-                if index[v]==-1:
-                    i += 1
-                    index[v] = i
-
-                updated_queue = False
-                for w in neighbors[v, 0:degree[v]]:
-                    if index[w]==-1:
-                        queue[k] = w
-                        k += 1
-                        updated_queue = True
-                        break
-
-                if not updated_queue:
-                    lowlink[v] = index[v]
-                    for w in neighbors[v, 0:degree[v]]:
-                        if not found[w]:
-                            if index[w]>index[v]:
-                                lowlink[v] = min(lowlink[v], lowlink[w])
-                            else:
-                                lowlink[v] = min(lowlink[v], index[w])
-                    k -= 1
-
-                    if lowlink[v]==index[v]:
-                        found[v] = True
-                        j += 1
-                        component[v] = j
-                        while l>=1 and index[subqueue[l-1]]>index[v]:
-                            w = subqueue[l-1]
-                            l -= 1
-                            found[w] = True
-                            component[w] = j
-                    else:
-                        subqueue[l] = v
-                        l += 1
-
-    return component
 
 def subproblem_index(A, weight):
     B = find_distinct_weights(A)[1:]
@@ -263,12 +152,7 @@ def subproblem_index(A, weight):
     return i
 
 def threshold_edges(A, weight):
-    if imported_fortran_module:
-        return fortran_module.threshold_matrix(A, weight)
-    else:
-        B = A.copy()
-        B[B>weight] = 0
-        return B
+    return backends.threshold_edges(A, weight)
 
 ####################################################################################################################################
 #
