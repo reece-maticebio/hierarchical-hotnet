@@ -1,10 +1,13 @@
 """Construct the hierarchical decomposition of the SCCs of the similarity matrix."""
 
 import math
+from typing import Optional
+
 import numpy as np
 from hierarchical_hotnet._parallel import maybe_pool
 from hierarchical_hotnet.common import combined_similarity_matrix
 from hierarchical_hotnet.hierarchical_clustering import strongly_connected_components, tarjan_HD
+from hierarchical_hotnet.storage import Store
 
 
 def _apply_score_transform(gene_to_score, log_transform, score_threshold):
@@ -74,7 +77,16 @@ def _worker(gene_to_score):
     return construct_hierarchy(_state['similarity_matrix'], _state['index_to_gene'], gene_to_score=gene_to_score, log_transform=_state['log_transform'], score_threshold=_state['score_threshold'])
 
 
-def construct_hierarchies(similarity_matrix, index_to_gene, gene_to_score_sets, *, n_jobs=1, log_transform=False, score_threshold=float('nan')):
+def construct_hierarchies(
+    similarity_matrix,
+    index_to_gene,
+    gene_to_score_sets,
+    *,
+    n_jobs=1,
+    log_transform=False,
+    score_threshold=float('nan'),
+    out: Optional[Store] = None,
+):
     """Build a hierarchy per ``gene_to_score`` set, sharing ``similarity_matrix``.
 
     Parameters
@@ -87,14 +99,36 @@ def construct_hierarchies(similarity_matrix, index_to_gene, gene_to_score_sets, 
         ``1`` runs serially. ``-1`` lets the pool pick worker count. The pool
         pickles ``similarity_matrix`` once per worker (via ``initializer``)
         rather than once per task.
+    out : Store, optional
+        If provided, each ``(T, common_index_to_gene)`` tuple is written into
+        ``out`` keyed by its position in the input (``"0"``, ``"1"``, ...) and
+        the populated store is returned. If ``None`` (default), the function
+        returns a list, matching its historical behavior. Use a
+        :class:`DiskStore` to spill hierarchies — typically the largest
+        fan-out artifact — instead of holding them all in memory.
 
     Returns
     -------
-    list[tuple[T, common_index_to_gene]]
-        One per input score set, in input order.
+    list[tuple[T, common_index_to_gene]] or Store
+        A list when ``out is None``; the populated ``out`` store otherwise.
     """
     sets = list(gene_to_score_sets)
+    if out is None:
+        if n_jobs == 1:
+            return [
+                construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=gs, log_transform=log_transform, score_threshold=score_threshold)
+                for gs in sets
+            ]
+        with maybe_pool(n_jobs, initializer=_init_worker, initargs=(similarity_matrix, index_to_gene, log_transform, score_threshold)) as map_fn:
+            return list(map_fn(_worker, sets))
+
+    # Streaming path: drain into the store as results arrive so peak memory
+    # holds at most one hierarchy plus the pool's queue.
     if n_jobs == 1:
-        return [construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=gs, log_transform=log_transform, score_threshold=score_threshold) for gs in sets]
-    with maybe_pool(n_jobs, initializer=_init_worker, initargs=(similarity_matrix, index_to_gene, log_transform, score_threshold)) as map_fn:
-        return list(map_fn(_worker, sets))
+        for i, gs in enumerate(sets):
+            out.put(str(i), construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=gs, log_transform=log_transform, score_threshold=score_threshold))
+    else:
+        with maybe_pool(n_jobs, initializer=_init_worker, initargs=(similarity_matrix, index_to_gene, log_transform, score_threshold)) as map_fn:
+            for i, result in enumerate(map_fn(_worker, sets)):
+                out.put(str(i), result)
+    return out
