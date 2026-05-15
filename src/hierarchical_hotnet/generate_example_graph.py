@@ -4,7 +4,7 @@
 import math
 import sys, argparse
 
-from hierarchical_hotnet.hhio import save_index_gene, save_edge_list, save_gene_score
+from hierarchical_hotnet.file_io import save_index_gene, save_edge_list, save_gene_score
 
 # Parse arguments.
 def get_parser():

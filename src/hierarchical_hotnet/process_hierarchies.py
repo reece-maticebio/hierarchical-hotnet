@@ -14,7 +14,7 @@ try:
 except ImportError:
     imported_fortran_module = False
 
-from hierarchical_hotnet.hhio import load_edge_list, load_index_gene, progress
+from hierarchical_hotnet.file_io import load_edge_list, load_index_gene, progress
 
 
 def compute_statistic(sizes):

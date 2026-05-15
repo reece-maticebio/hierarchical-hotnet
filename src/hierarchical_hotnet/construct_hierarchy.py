@@ -7,7 +7,7 @@ import numpy as np
 
 from hierarchical_hotnet._parallel import maybe_pool
 from hierarchical_hotnet.common import combined_similarity_matrix
-from hierarchical_hotnet.hhio import (
+from hierarchical_hotnet.file_io import (
     load_gene_score,
     load_index_gene,
     load_matrix,

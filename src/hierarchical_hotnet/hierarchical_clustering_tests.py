@@ -3,7 +3,7 @@
 import math, numpy as np
 
 from hierarchical_hotnet.hierarchical_clustering import *
-from hierarchical_hotnet.hhio import progress
+from hierarchical_hotnet.file_io import progress
 
 ####################################################################################################################################
 #

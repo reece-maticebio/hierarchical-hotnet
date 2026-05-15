@@ -25,7 +25,7 @@ from hierarchical_hotnet.config import (
     ScoringConfig,
     SimilarityConfig,
 )
-from hierarchical_hotnet.hhio import (
+from hierarchical_hotnet.file_io import (
     load_edge_list,
     load_gene_score,
     load_index_gene,

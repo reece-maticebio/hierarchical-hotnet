@@ -7,7 +7,7 @@ import random
 import networkx as nx
 
 from hierarchical_hotnet._parallel import maybe_pool
-from hierarchical_hotnet.hhio import load_edge_list, save_edge_list
+from hierarchical_hotnet.file_io import load_edge_list, save_edge_list
 
 
 def permute_network(edges, *, seed=None, preserve_connectivity=False, Q=100):

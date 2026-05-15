@@ -7,7 +7,7 @@ import scipy as sp
 import scipy.optimize
 
 from hierarchical_hotnet.common import hh_similarity_matrix
-from hierarchical_hotnet.hhio import load_edge_list, save_matrix
+from hierarchical_hotnet.file_io import load_edge_list, save_matrix
 
 
 def _difference(A, beta, threshold):

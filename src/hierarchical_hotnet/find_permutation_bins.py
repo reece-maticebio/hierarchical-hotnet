@@ -5,7 +5,7 @@ from collections import defaultdict
 
 import networkx as nx
 
-from hierarchical_hotnet.hhio import load_edge_list, load_gene_score, load_index_gene
+from hierarchical_hotnet.file_io import load_edge_list, load_gene_score, load_index_gene
 
 
 def compute_permutation_bins(edges, gene_to_score, *, min_size=float('inf')):

@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 
 from hierarchical_hotnet._parallel import maybe_pool
-from hierarchical_hotnet.hhio import load_gene_score, save_gene_score
+from hierarchical_hotnet.file_io import load_gene_score, save_gene_score
 
 
 def load_bins(filename):
