@@ -8,6 +8,8 @@ This fork modernizes the original package for Python 3.10+ with a `pip`-installa
 * A first-class Python API: every step is importable and operates on Python objects (arrays, dicts) rather than only on files.
 * Built-in parallelism: each batch step accepts an `n_jobs` parameter and runs on a `concurrent.futures.ProcessPoolExecutor`.
 * An end-to-end `run_pipeline()` that composes the steps.
+* **Disk-backed runs.** Passing `workdir=Path(...)` to `run_pipeline()` spills every artifact (similarity matrix, bins, permuted scores, hierarchies) to disk under a fixed layout and streams the large fan-out artifacts (hierarchies) lazily, so peak memory stays bounded even with thousands of permutations. `reuse=True` resumes interrupted runs by reading existing artifacts back instead of recomputing them.
+* **Switchable backend.** The Fortran-accelerated paths can be forced or disabled at import time via the `HHNET_BACKEND` env var (`auto` / `fortran` / `python`), with the active choice exposed as `hierarchical_hotnet.backends.BACKEND`.
 
 Setup
 ------------------------
@@ -29,6 +31,18 @@ Clone the repository and install with `pip`:
     pip install '.[plot]'    # with matplotlib for plotting
 
 Installation exposes both a Python module (`import hierarchical_hotnet as hhn`) and a single CLI entry point (`hhnet`) with subcommands for each pipeline step (listed below; see `hhnet --help`). If no Fortran compiler is found at build time the install still succeeds and the package falls back to the pure-Python implementation, which is slower but otherwise equivalent.
+
+### Backend selection
+
+The Fortran-accelerated routines (SCC, matrix slicing/condensation, statistics aggregation) and their pure-Python equivalents both live behind a single dispatch in `hierarchical_hotnet.backends`. The selection happens once at import time:
+
+| `HHNET_BACKEND` | Behavior |
+|---|---|
+| unset / `auto` | Try Fortran; warn and fall back to pure Python if the extension wasn't built. |
+| `fortran` | Require the Fortran extension (raises on import if missing — useful as a CI guard against silent perf regressions). |
+| `python` | Force the pure-Python path (for testing the fallback or profiling). |
+
+The active choice is exposed as `hierarchical_hotnet.backends.BACKEND` (`"fortran"` or `"python"`).
 
 ### Testing
 To verify the install end-to-end:
@@ -264,7 +278,7 @@ permuted_list = hhn.permute_network_many(
 )
 ```
 
-Note: the default `examples/example_commands.sh` pipeline does *not* use these — they are shown for an alternative significance test.
+Note: neither the default `examples/example_commands.sh` workflow nor `hhn.run_pipeline()` invokes these — both rely on score permutations as the null model, matching the canonical Hierarchical HotNet methodology. Network permutation is exposed for users who want to add it as an additional null themselves: generate permuted edge lists with `permute_network_many`, then run `compute_similarity_matrix` + `construct_hierarchy` on each.
 
 ### 4. Construct hierarchies
 **Purpose.** Build the dendrogram. Given the similarity matrix `P` and a score map, forms a score-weighted matrix `S[i, j] = P[i, j] * score[j]`, then runs Tarjan's hierarchical decomposition: at each "cut height" `δ`, the strongly connected components of `{edges with weight ≥ δ}` form a clustering. Leaves are individual genes; as `δ` decreases, components merge upward.
@@ -428,6 +442,45 @@ result.consensus.edges                # consensus subnetwork edges
 | `-1` | Pool picks worker count (defaults to `os.cpu_count()`). |
 
 For small inputs (the toy example) `n_jobs=1` is usually faster than `n_jobs>1` because pool startup + inter-process serialization dominates the actual work. The break-even point is roughly when each task takes hundreds of milliseconds or more; for real biological networks `construct_hierarchies` is comfortably above that.
+
+### Disk-backed runs (`workdir=`, `reuse=`)
+
+For large permutation counts on real-sized networks, holding every hierarchy in memory is the dominant peak-memory cost. Passing a `workdir` makes `run_pipeline` spill every artifact to disk and stream the hierarchies lazily into the statistics step, so peak memory is bounded regardless of `num_permutations`:
+
+```python
+from pathlib import Path
+
+result = hhn.run_pipeline(
+    edges, index_to_gene, {"scores_1": scores_1, "scores_2": scores_2},
+    num_permutations=1000,
+    n_jobs=8,
+    workdir=Path("./hhnet_run_2026_05_15"),
+)
+```
+
+The on-disk layout is fixed and matches the formats the standalone CLI commands produce, so workdir artifacts are interoperable with `hhnet construct-hierarchy` etc.:
+
+```
+<workdir>/similarity_matrix.h5
+<workdir>/beta.txt
+<workdir>/bins/<label>.tsv
+<workdir>/permuted_scores/<label>/<seed>.tsv
+<workdir>/hierarchies/<label>/<i>.edges.tsv   (+ .genes.tsv)
+```
+
+**Resuming an interrupted run.** With `reuse=True`, each artifact path is checked individually; existing files are read back instead of recomputed, missing ones are computed normally. Useful when a long run was killed midway, or when iterating on downstream parameters (the cut bounds, the consensus threshold) without re-doing the expensive hierarchies stage:
+
+```python
+# Second invocation picks up wherever the first left off.
+result = hhn.run_pipeline(
+    edges, index_to_gene, score_sets,
+    num_permutations=1000,
+    workdir=Path("./hhnet_run_2026_05_15"),
+    reuse=True,
+)
+```
+
+With `reuse=False` (the default), `workdir` is still honored but every stage recomputes from scratch and overwrites the prior artifacts.
 
 Output
 ----------------
