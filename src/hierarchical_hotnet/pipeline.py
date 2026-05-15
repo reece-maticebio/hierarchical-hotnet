@@ -6,6 +6,7 @@ is sequential composition: parallelism is applied within a single score set's
 permutations, not across score sets.
 """
 
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Optional
@@ -25,6 +26,23 @@ from hierarchical_hotnet.process_hierarchies import (
     ProcessHierarchiesResult,
     process_hierarchies,
 )
+
+logger = logging.getLogger(__name__)
+
+
+def _ensure_visible_logging() -> None:
+    """Attach a default handler so ``verbose=True`` prints progress.
+
+    Idempotent: if the package logger already has handlers (because the caller
+    configured logging explicitly), do nothing.
+    """
+    pkg_logger = logging.getLogger("hierarchical_hotnet")
+    if not pkg_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        pkg_logger.addHandler(handler)
+    if pkg_logger.level == logging.NOTSET or pkg_logger.level > logging.INFO:
+        pkg_logger.setLevel(logging.INFO)
 
 
 @dataclass
@@ -103,10 +121,12 @@ def run_pipeline(
     if not isinstance(score_sets, Mapping):
         raise TypeError('score_sets must be a mapping {label: gene_to_score}')
 
+    if verbose:
+        _ensure_visible_logging()
+
     edges = list(edges)
 
-    if verbose:
-        print('Building similarity matrix...')
+    logger.info('Building similarity matrix...')
     similarity_matrix, beta_used = compute_similarity_matrix(
         edges,
         directed=directed,
@@ -125,18 +145,15 @@ def run_pipeline(
     for label, gene_to_score in score_sets.items():
         gene_to_score = dict(gene_to_score)
 
-        if verbose:
-            print(f'[{label}] Computing permutation bins...')
+        logger.info('[%s] Computing permutation bins...', label)
         bins = compute_permutation_bins(unweighted_gene_edges, gene_to_score, min_size=min_bin_size)
 
-        if verbose:
-            print(f'[{label}] Permuting scores ({num_permutations} permutations, n_jobs={n_jobs})...')
+        logger.info('[%s] Permuting scores (%d permutations, n_jobs=%d)...', label, num_permutations, n_jobs)
         permuted_scores_list = permute_scores_many(
             gene_to_score, bins, seeds=seeds, n_jobs=n_jobs,
         )
 
-        if verbose:
-            print(f'[{label}] Building {num_permutations + 1} hierarchies (n_jobs={n_jobs})...')
+        logger.info('[%s] Building %d hierarchies (n_jobs=%d)...', label, num_permutations + 1, n_jobs)
         hierarchies = construct_hierarchies(
             similarity_matrix,
             index_to_gene,
@@ -149,8 +166,7 @@ def run_pipeline(
         permuted_Ts = [T for T, _ in hierarchies[1:]]
         permuted_idx2genes = [g for _, g in hierarchies[1:]]
 
-        if verbose:
-            print(f'[{label}] Processing hierarchies (n_jobs={n_jobs})...')
+        logger.info('[%s] Processing hierarchies (n_jobs=%d)...', label, n_jobs)
         result = process_hierarchies(
             observed_T, observed_idx2gene, permuted_Ts, permuted_idx2genes,
             lower_size_bound=lower_size_bound,
@@ -167,8 +183,7 @@ def run_pipeline(
 
     consensus = None
     if consensus_threshold is not None and score_sets:
-        if verbose:
-            print(f'Performing consensus (threshold={consensus_threshold})...')
+        logger.info('Performing consensus (threshold=%s)...', consensus_threshold)
         inputs = [
             ConsensusInput(edges=gene_edges, components=consensus_payload[label])
             for label in score_sets

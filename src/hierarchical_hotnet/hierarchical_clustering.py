@@ -1,13 +1,22 @@
 #!/usr/bin/python
 
+import logging
 import math, numpy as np
 from collections import defaultdict
+
+logger = logging.getLogger(__name__)
 
 try:
     from hierarchical_hotnet import fortran_module
     imported_fortran_module = True
+    logger.info("hierarchical_hotnet: using Fortran backend for clustering")
 except ImportError:
     imported_fortran_module = False
+    logger.warning(
+        "hierarchical_hotnet: Fortran backend unavailable; falling back to "
+        "pure-Python clustering (slow). Rebuild the package with a working "
+        "Fortran toolchain to enable the fast path."
+    )
 
 ####################################################################################################################################
 #
