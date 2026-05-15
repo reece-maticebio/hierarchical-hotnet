@@ -193,13 +193,23 @@ def process_hierarchies(observed_hierarchy, observed_index_to_gene, permuted_hie
     -------
     ProcessHierarchiesResult
     """
-    if len(permuted_hierarchies) != len(permuted_index_to_gene_list):
-        raise ValueError('permuted_hierarchies and permuted_index_to_gene_list lengths differ')
+    # When both inputs are sized (the historical case — both are lists), we can
+    # still cheaply validate their lengths match. Iterables without __len__
+    # (e.g. generators that pull hierarchies from disk one at a time) skip the
+    # check; zip will simply stop at the shorter side if they diverge.
+    if hasattr(permuted_hierarchies, '__len__') and hasattr(permuted_index_to_gene_list, '__len__'):
+        if len(permuted_hierarchies) != len(permuted_index_to_gene_list):
+            raise ValueError('permuted_hierarchies and permuted_index_to_gene_list lengths differ')
+
+    def _stats_input():
+        # Generator — keeps peak memory at one hierarchy at a time when the
+        # caller passes lazy iterables (DiskStore iteration in the pipeline).
+        yield (observed_hierarchy, observed_index_to_gene)
+        yield from zip(permuted_hierarchies, permuted_index_to_gene_list)
+
     map_fn, cleanup = _resolve_map(n_jobs)
     try:
-        stats_input = [(observed_hierarchy, observed_index_to_gene)]
-        stats_input += list(zip(permuted_hierarchies, permuted_index_to_gene_list))
-        stats_output = list(map_fn(_statistics_worker, stats_input))
+        stats_output = list(map_fn(_statistics_worker, _stats_input()))
     finally:
         cleanup()
     observed_heights, observed_sizes = stats_output[0]

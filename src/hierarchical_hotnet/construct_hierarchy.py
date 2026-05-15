@@ -86,6 +86,7 @@ def construct_hierarchies(
     log_transform=False,
     score_threshold=float('nan'),
     out: Optional[Store] = None,
+    keys: Optional[list] = None,
 ):
     """Build a hierarchy per ``gene_to_score`` set, sharing ``similarity_matrix``.
 
@@ -106,6 +107,11 @@ def construct_hierarchies(
         returns a list, matching its historical behavior. Use a
         :class:`DiskStore` to spill hierarchies — typically the largest
         fan-out artifact — instead of holding them all in memory.
+    keys : list[str], optional
+        Only meaningful with ``out``. Overrides the default keys
+        (``"0"``, ``"1"``, ...) so the caller can compute a subset of the
+        hierarchies of a larger run while keying them by their original
+        positions. Length must match ``gene_to_score_sets``.
 
     Returns
     -------
@@ -114,6 +120,8 @@ def construct_hierarchies(
     """
     sets = list(gene_to_score_sets)
     if out is None:
+        if keys is not None:
+            raise ValueError("keys= is only valid together with out=")
         if n_jobs == 1:
             return [
                 construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=gs, log_transform=log_transform, score_threshold=score_threshold)
@@ -122,13 +130,18 @@ def construct_hierarchies(
         with maybe_pool(n_jobs, initializer=_init_worker, initargs=(similarity_matrix, index_to_gene, log_transform, score_threshold)) as map_fn:
             return list(map_fn(_worker, sets))
 
+    if keys is None:
+        keys = [str(i) for i in range(len(sets))]
+    elif len(keys) != len(sets):
+        raise ValueError("keys length must match gene_to_score_sets")
+
     # Streaming path: drain into the store as results arrive so peak memory
     # holds at most one hierarchy plus the pool's queue.
     if n_jobs == 1:
-        for i, gs in enumerate(sets):
-            out.put(str(i), construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=gs, log_transform=log_transform, score_threshold=score_threshold))
+        for k, gs in zip(keys, sets):
+            out.put(k, construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=gs, log_transform=log_transform, score_threshold=score_threshold))
     else:
         with maybe_pool(n_jobs, initializer=_init_worker, initargs=(similarity_matrix, index_to_gene, log_transform, score_threshold)) as map_fn:
-            for i, result in enumerate(map_fn(_worker, sets)):
-                out.put(str(i), result)
+            for k, result in zip(keys, map_fn(_worker, sets)):
+                out.put(k, result)
     return out
