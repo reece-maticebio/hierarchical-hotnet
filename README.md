@@ -28,7 +28,7 @@ Clone the repository and install with `pip`:
     pip install .            # core install
     pip install '.[plot]'    # with matplotlib for plotting
 
-Installation exposes both a Python module (`import hierarchical_hotnet as hhn`) and a set of CLI commands (`hhnet-*`, listed below). If no Fortran compiler is found at build time the install still succeeds and the package falls back to the pure-Python implementation, which is slower but otherwise equivalent.
+Installation exposes both a Python module (`import hierarchical_hotnet as hhn`) and a single CLI entry point (`hhnet`) with subcommands for each pipeline step (listed below; see `hhnet --help`). If no Fortran compiler is found at build time the install still succeeds and the package falls back to the pure-Python implementation, which is slower but otherwise equivalent.
 
 ### Testing
 To verify the install end-to-end:
@@ -164,14 +164,14 @@ consensus_edges = {frozenset((u, v)) for u, v in gene_edges}
 
 Pipeline steps
 ----------------
-Each step has both a CLI command (`hhnet-*`) and a Python function (importable from `hierarchical_hotnet`). Batch steps that are embarrassingly parallel accept an `n_jobs` parameter.
+Each step has both a CLI subcommand (`hhnet <step>`) and a Python function (importable from `hierarchical_hotnet`). Batch steps that are embarrassingly parallel accept an `n_jobs` parameter.
 
 ### 1. Construct similarity matrix
 **Purpose.** Compute personalized PageRank `P` where `P[i, j]` is the probability of a random walk landing at `i` when started at `j`. This turns the sparse network into a continuous "topological closeness" measure. The restart probability `β` controls locality; if unspecified it is auto-chosen to balance edge mass.
 
 **CLI:**
 
-    hhnet-construct-similarity-matrix \
+    hhnet construct-similarity-matrix \
         -i  network_edge_list.tsv \
         -o  similarity_matrix.h5 \
         -bof beta.txt
@@ -192,7 +192,7 @@ Returns `(similarity_matrix: np.ndarray, beta: float)`.
 
 **CLI:**
 
-    hhnet-find-permutation-bins \
+    hhnet find-permutation-bins \
         -igf network_index_gene.tsv \
         -elf network_edge_list.tsv \
         -gsf scores.tsv \
@@ -217,7 +217,7 @@ Returns `list[list[str]]` — each inner list is a bin of interchangeable gene n
 
 **CLI (single permutation):**
 
-    hhnet-permute-scores \
+    hhnet permute-scores \
         -i  scores.tsv \
         -bf score_bins.tsv \
         -s  42 \
@@ -246,7 +246,7 @@ permuted_list = hhn.permute_scores_many(
 
 **CLI:**
 
-    hhnet-permute-network \
+    hhnet permute-network \
         -i edge_list.tsv \
         -s 1 \
         -c \                              # preserve connectivity
@@ -273,7 +273,7 @@ You typically build many hierarchies: one for the observed scores and one per pe
 
 **CLI (single hierarchy):**
 
-    hhnet-construct-hierarchy \
+    hhnet construct-hierarchy \
         -smf  similarity_matrix.h5 \
         -igf  network_index_gene.tsv \
         -gsf  scores.tsv \
@@ -311,7 +311,7 @@ For each cut height δ, compares the largest observed cluster size to the distri
 
 **CLI:**
 
-    hhnet-process-hierarchies \
+    hhnet process-hierarchies \
         -oelf hierarchy_edge_list_0.tsv \
         -oigf hierarchy_index_gene_0.tsv \
         -pelf hierarchy_edge_list_{1..100}.tsv \
@@ -347,7 +347,7 @@ result.distinct_heights, result.min_sizes, result.expected_sizes, result.max_siz
 
 **CLI:**
 
-    hhnet-perform-consensus \
+    hhnet perform-consensus \
         -cf  clusters_n1_s1.tsv clusters_n1_s2.tsv \
         -igf network_index_gene.tsv network_index_gene.tsv \
         -elf network_edge_list.tsv network_edge_list.tsv \

@@ -47,7 +47,7 @@ echo "Construct similarity matrices..."
 
 for network in network_1
 do
-    hhnet-construct-similarity-matrix \
+    hhnet construct-similarity-matrix \
         -i   "$data/${network}_edge_list.tsv" \
         -o   "$intermediate/$network/similarity_matrix.h5" \
         -bof "$intermediate/$network/beta.txt"
@@ -70,7 +70,7 @@ do
 
     # Preserve connectivity of the observed graph.
     parallel -u -j $num_cores --bar \
-        hhnet-permute-network \
+        hhnet permute-network \
             -i "$intermediate/$network/edge_list_0.tsv" \
             -s {} \
             -c \
@@ -79,7 +79,7 @@ do
 
     # Do not preserve connectivity of the observed graph.
     parallel -u -j $num_cores --bar \
-        hhnet-permute-network \
+        hhnet permute-network \
             -i "$intermediate/$network/edge_list_0.tsv" \
             -s {} \
             -o "$intermediate/$network/edge_list_{}.tsv" \
@@ -94,7 +94,7 @@ do
     do
         cp "$data/${score}.tsv" "$intermediate/${network}_${score}/scores_0.tsv"
 
-        hhnet-find-permutation-bins \
+        hhnet find-permutation-bins \
             -gsf "$intermediate/${network}_${score}/scores_0.tsv" \
             -igf "$data/${network}_index_gene.tsv" \
             -elf "$data/${network}_edge_list.tsv" \
@@ -102,7 +102,7 @@ do
             -o   "$intermediate/${network}_${score}/score_bins.tsv"
 
         parallel -u -j $num_cores --bar \
-            hhnet-permute-scores \
+            hhnet permute-scores \
                 -i  "$intermediate/${network}_${score}/scores_0.tsv" \
                 -bf "$intermediate/${network}_${score}/score_bins.tsv" \
                 -s  {} \
@@ -124,7 +124,7 @@ do
     for score in scores_1 scores_2
     do
         parallel -u -j $num_cores --bar \
-            hhnet-construct-hierarchy \
+            hhnet construct-hierarchy \
                 -smf  "$intermediate/$network/similarity_matrix.h5" \
                 -igf  "$data/${network}_index_gene.tsv" \
                 -gsf  "$intermediate/${network}_${score}/scores_{}.tsv" \
@@ -148,7 +148,7 @@ for network in network_1
 do
     for score in scores_1 scores_2
     do
-        hhnet-process-hierarchies \
+        hhnet process-hierarchies \
             -oelf "$intermediate/${network}_${score}/hierarchy_edge_list_0.tsv" \
             -oigf "$intermediate/${network}_${score}/hierarchy_index_gene_0.tsv" \
             -pelf $(for i in `seq $num_permutations`; do echo " $intermediate/${network}_${score}/hierarchy_edge_list_$i.tsv "; done) \
@@ -169,7 +169,7 @@ done
 
 echo "Performing consensus..."
 
-hhnet-perform-consensus \
+hhnet perform-consensus \
     -cf  "$results/clusters_network_1_scores_1.tsv" "$results/clusters_network_1_scores_2.tsv" \
     -igf "$data/network_1_index_gene.tsv" "$data/network_1_index_gene.tsv" \
     -elf "$data/network_1_edge_list.tsv" "$data/network_1_edge_list.tsv" \
