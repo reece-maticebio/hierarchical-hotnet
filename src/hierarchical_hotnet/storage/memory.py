@@ -23,6 +23,9 @@ class MemoryStore(Generic[T]):
     def get(self, key: str) -> T:
         return self._items[key]
 
+    def __getitem__(self, key: str) -> T:
+        return self._items[key]
+
     def keys(self) -> Iterable[str]:
         return self._items.keys()
 
