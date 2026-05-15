@@ -17,6 +17,14 @@ from hierarchical_hotnet.perform_consensus import (
     ConsensusResult,
 )
 from hierarchical_hotnet.pipeline import run_pipeline, PipelineResult
+from hierarchical_hotnet.config import (
+    ConsensusConfig,
+    HierarchyConfig,
+    PermutationConfig,
+    RuntimeConfig,
+    ScoringConfig,
+    SimilarityConfig,
+)
 from hierarchical_hotnet.hhio import (
     load_edge_list,
     load_gene_score,
@@ -48,6 +56,13 @@ __all__ = [
     "ProcessHierarchiesResult",
     "ConsensusInput",
     "ConsensusResult",
+    # configs
+    "SimilarityConfig",
+    "ScoringConfig",
+    "PermutationConfig",
+    "HierarchyConfig",
+    "ConsensusConfig",
+    "RuntimeConfig",
     # IO helpers
     "load_edge_list",
     "load_gene_score",
