@@ -42,32 +42,27 @@ py.extension_module('fortran_module',
   install: true,
 )
 
-py.install_sources(
-  [
-    'src/hierarchical_hotnet/__init__.py',
-    'src/hierarchical_hotnet/_parallel.py',
-    'src/hierarchical_hotnet/common.py',
-    'src/hierarchical_hotnet/hhio.py',
-    'src/hierarchical_hotnet/hierarchical_clustering.py',
-    'src/hierarchical_hotnet/hierarchical_clustering_tests.py',
-    'src/hierarchical_hotnet/construct_hierarchy.py',
-    'src/hierarchical_hotnet/construct_similarity_matrix.py',
-    'src/hierarchical_hotnet/find_permutation_bins.py',
-    'src/hierarchical_hotnet/generate_example_graph.py',
-    'src/hierarchical_hotnet/perform_consensus.py',
-    'src/hierarchical_hotnet/permute_network.py',
-    'src/hierarchical_hotnet/permute_scores.py',
-    'src/hierarchical_hotnet/pipeline.py',
-    'src/hierarchical_hotnet/process_hierarchies.py',
-  ],
-  subdir: 'hierarchical_hotnet',
-)
+# Python sources are discovered automatically via tools/list_sources.py.
+# Meson only re-runs run_command at configure time, so after ADDING a new .py
+# file you must rerun `pip install --no-build-isolation --no-deps -e .`
+# (or `meson setup --reconfigure build/cp312`) for it to be picked up.
+# Editing an existing file does NOT require a reconfigure.
+list_sources = files('tools/list_sources.py')
 
-py.install_sources(
-  [
-    'src/hierarchical_hotnet/storage/__init__.py',
-    'src/hierarchical_hotnet/storage/base.py',
-    'src/hierarchical_hotnet/storage/memory.py',
-  ],
-  subdir: 'hierarchical_hotnet/storage',
-)
+top_sources = run_command(
+  py, list_sources, 'src/hierarchical_hotnet', check: true,
+).stdout().strip().split('\n')
+py.install_sources(top_sources, subdir: 'hierarchical_hotnet')
+
+subpackages_out = run_command(
+  py, list_sources, 'src/hierarchical_hotnet', '--subpackages', check: true,
+).stdout().strip()
+
+if subpackages_out != ''
+  foreach subpkg : subpackages_out.split('\n')
+    sub_sources = run_command(
+      py, list_sources, 'src/hierarchical_hotnet/' + subpkg, check: true,
+    ).stdout().strip().split('\n')
+    py.install_sources(sub_sources, subdir: 'hierarchical_hotnet/' + subpkg)
+  endforeach
+endif
