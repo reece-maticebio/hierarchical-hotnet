@@ -114,6 +114,93 @@ def _hierarchies_store(workdir: Optional[Path], label: str) -> Store:
     return DiskStore(workdir / "hierarchies" / label, HierarchyCodec())
 
 
+def save_pipeline_result(
+    result: "PipelineResult",
+    workdir: Path,
+    *,
+    plot: bool = False,
+) -> None:
+    """Save the final outputs from a :class:`PipelineResult` under ``<workdir>/results/``.
+
+    The on-disk format mirrors what ``hhnet process-hierarchies`` and
+    ``hhnet perform-consensus`` produce, so a workdir from
+    :func:`run_pipeline` is interoperable with anything downstream that
+    consumes the CLI output.
+
+    Per score-set:
+
+      * ``<label>_clusters.tsv`` — header comments (cut height, p-value,
+        ratios) followed by one cluster per line, tab-separated genes,
+        sorted by cluster size descending.
+      * ``<label>_observed_sizes.tsv`` — ``height\\tlargest_cluster_size``
+        for the observed hierarchy.
+      * ``<label>_permuted_sizes.tsv`` —
+        ``height\\tmin\\tmean(expected)\\tmax`` aggregated across permutations.
+      * ``<label>_sizes.pdf`` — observed vs expected size plot (only when
+        ``plot=True``; requires matplotlib).
+
+    Consensus (when present): ``consensus_nodes.tsv``, ``consensus_edges.tsv``.
+    """
+    workdir = Path(workdir)
+    results_dir = workdir / "results"
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    for label, r in result.score_results.items():
+        sorted_clusters = sorted(
+            sorted(map(sorted, r.observed_clusters)), key=len, reverse=True,
+        )
+        cluster_lines = "\n".join("\t".join(c) for c in sorted_clusters)
+        header = (
+            f"# Observed cut height: {r.observed_cut_height}\n"
+            f"# Observed size of largest cluster at observed cut height: {r.observed_cut_size}\n"
+            f"# Expected size of largest cluster at observed cut height: {r.expected_cut_size}\n"
+            f"# Observed maximum ratio statistic: {r.observed_cut_ratio:.3f}\n"
+            f"# Expected maximum ratio statistic: {r.expected_cut_ratio:.3f}\n"
+            f"# p-value: {r.p_value}\n"
+            f"# Clusters:\n"
+        )
+        # No trailing newline -- matches what hhnet process-hierarchies writes,
+        # so this file diffs cleanly against the canonical CLI output.
+        (results_dir / f"{label}_clusters.tsv").write_text(header + cluster_lines)
+
+        (results_dir / f"{label}_observed_sizes.tsv").write_text(
+            "\n".join(f"{h}\t{s}" for h, s in zip(r.observed_heights, r.observed_sizes))
+        )
+        (results_dir / f"{label}_permuted_sizes.tsv").write_text(
+            "# height\tmin\texpected\tmax\n"
+            + "\n".join(
+                f"{h}\t{mn}\t{ex}\t{mx}"
+                for h, mn, ex, mx in zip(
+                    r.distinct_heights, r.min_sizes, r.expected_sizes, r.max_sizes
+                )
+            )
+        )
+
+        if plot:
+            # Imported lazily so the optional matplotlib dep is only required
+            # when the caller actually asks for a plot.
+            from hierarchical_hotnet.core.process_hierarchies import plot_cluster_sizes
+            plot_cluster_sizes(
+                r.observed_heights, r.observed_sizes,
+                r.distinct_heights, r.min_sizes,
+                r.distinct_heights, r.expected_sizes,
+                r.distinct_heights, r.max_sizes,
+                r.permuted_heights_collection,
+                r.permuted_sizes_collection,
+                r.observed_cut_height,
+                label,
+                str(results_dir / f"{label}_sizes.pdf"),
+            )
+
+    if result.consensus is not None:
+        (results_dir / "consensus_nodes.tsv").write_text(
+            "\n".join("\t".join(g) for g in result.consensus.nodes)
+        )
+        (results_dir / "consensus_edges.tsv").write_text(
+            "\n".join("\t".join(e) for e in result.consensus.edges)
+        )
+
+
 def run_pipeline(
     edges,
     index_to_gene,
@@ -135,6 +222,7 @@ def run_pipeline(
     verbose: bool = False,
     workdir: Optional[Path] = None,
     reuse: bool = False,
+    plot: bool = False,
 ):
     """Run the full Hierarchical HotNet pipeline for one network and N score sets.
 
@@ -177,6 +265,10 @@ def run_pipeline(
         Only meaningful with ``workdir``. When ``True``, each artifact path is
         checked individually; existing files are read back instead of being
         recomputed. Lets interrupted runs resume without external state.
+    plot : bool
+        Only meaningful with ``workdir``. When ``True``, also write a
+        ``<workdir>/results/<label>_sizes.pdf`` for each score set. Requires
+        the optional ``matplotlib`` dependency (``pip install '.[plot]'``).
 
     Returns
     -------
@@ -326,9 +418,14 @@ def run_pipeline(
         ]
         consensus = perform_consensus(inputs, threshold=consensus_threshold)
 
-    return PipelineResult(
+    pipeline_result = PipelineResult(
         similarity_matrix=similarity_matrix,
         beta=beta_used,
         score_results=score_results,
         consensus=consensus,
     )
+
+    if workdir is not None:
+        save_pipeline_result(pipeline_result, workdir, plot=plot)
+
+    return pipeline_result

@@ -94,23 +94,32 @@ def main() -> None:
         "--reuse", action="store_true",
         help="Reuse artifacts already present in workdir (skip recomputation).",
     )
+    parser.add_argument(
+        "--plot", action="store_true",
+        help="Also write <workdir>/results/<label>_sizes.pdf for each score set "
+             "(requires matplotlib; install with pip install '.[plot]').",
+    )
     args = parser.parse_args()
 
     print(f"Clustering backend: {backends.BACKEND}")
     print(f"Workdir:            {args.workdir}")
     print(f"Reuse:              {args.reuse}")
+    print(f"Plot:               {args.plot}")
     print()
 
     index_to_gene, edges, score_sets = load_inputs()
     result = hhn.run_pipeline(
         edges, index_to_gene, score_sets,
-        workdir=args.workdir, reuse=args.reuse,
+        workdir=args.workdir, reuse=args.reuse, plot=args.plot,
         **PIPELINE_KWARGS,
     )
 
     summarize(result)
     print(f"  matches canonical:          {matches_canonical(result)}")
     list_artifacts(args.workdir)
+
+    print()
+    print(f"Final results saved under: {args.workdir / 'results'}")
 
 
 if __name__ == "__main__":
