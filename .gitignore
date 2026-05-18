@@ -1,5 +1,6 @@
 intermediate/
 results/
+examples/pipeline_output/
 .vscode/
 .pytest_cache/
 build/

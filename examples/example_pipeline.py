@@ -7,20 +7,18 @@ same canonical consensus output, but driven through the Python
 Run from the repository root::
 
     python examples/example_pipeline.py
+    python examples/example_pipeline.py --workdir my_output
+    python examples/example_pipeline.py --reuse           # resume a previous run
 
-The script:
-
-  1. Loads the toy dataset (25-node network, two score sets).
-  2. Calls ``run_pipeline`` in memory mode and prints per-score statistics.
-  3. Verifies the consensus matches the committed canonical fixtures
-     (``example_consensus_nodes.tsv``, ``example_consensus_edges.tsv``).
-  4. Re-runs the pipeline with ``workdir=<tmp>``, prints the on-disk layout,
-     and confirms it produces the same results as the in-memory run.
+The pipeline writes every artifact (similarity matrix, beta, bins, permuted
+scores, hierarchies) under ``--workdir`` in the layout described in the
+README. The script then prints per-score statistics and verifies that the
+consensus matches the committed canonical fixtures.
 """
 
 from __future__ import annotations
 
-import tempfile
+import argparse
 from pathlib import Path
 
 import hierarchical_hotnet as hhn
@@ -30,6 +28,7 @@ from hierarchical_hotnet import backends
 REPO = Path(__file__).resolve().parent.parent
 DATA = REPO / "examples" / "data"
 CANONICAL = REPO / "examples"
+DEFAULT_WORKDIR = REPO / "examples" / "pipeline_output"
 
 # These match examples/example_commands.sh exactly. ``lower_size_bound=1`` is
 # specific to the toy example (25 nodes); for real networks, use the default
@@ -86,38 +85,32 @@ def list_artifacts(workdir: Path) -> None:
 
 
 def main() -> None:
-    print(f"Clustering backend: {backends.BACKEND}\n")
-    index_to_gene, edges, score_sets = load_inputs()
-
-    print("=" * 60)
-    print("In-memory run (workdir=None)")
-    print("=" * 60)
-    in_mem = hhn.run_pipeline(edges, index_to_gene, score_sets, **PIPELINE_KWARGS)
-    summarize(in_mem)
-    print(f"  matches canonical:          {matches_canonical(in_mem)}")
-
-    with tempfile.TemporaryDirectory(prefix="hhnet_example_") as tmp:
-        workdir = Path(tmp)
-        print()
-        print("=" * 60)
-        print(f"Disk-backed run (workdir={workdir})")
-        print("=" * 60)
-        on_disk = hhn.run_pipeline(
-            edges, index_to_gene, score_sets, workdir=workdir, **PIPELINE_KWARGS,
-        )
-        summarize(on_disk)
-        print(f"  matches canonical:          {matches_canonical(on_disk)}")
-        list_artifacts(workdir)
-
-    same = (
-        in_mem.beta == on_disk.beta
-        and all(
-            in_mem.score_results[k].p_value == on_disk.score_results[k].p_value
-            for k in in_mem.score_results
-        )
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--workdir", type=Path, default=DEFAULT_WORKDIR,
+        help=f"Directory to save run artifacts (default: {DEFAULT_WORKDIR.relative_to(REPO)})",
     )
+    parser.add_argument(
+        "--reuse", action="store_true",
+        help="Reuse artifacts already present in workdir (skip recomputation).",
+    )
+    args = parser.parse_args()
+
+    print(f"Clustering backend: {backends.BACKEND}")
+    print(f"Workdir:            {args.workdir}")
+    print(f"Reuse:              {args.reuse}")
     print()
-    print(f"in-memory and disk-backed runs identical: {same}")
+
+    index_to_gene, edges, score_sets = load_inputs()
+    result = hhn.run_pipeline(
+        edges, index_to_gene, score_sets,
+        workdir=args.workdir, reuse=args.reuse,
+        **PIPELINE_KWARGS,
+    )
+
+    summarize(result)
+    print(f"  matches canonical:          {matches_canonical(result)}")
+    list_artifacts(args.workdir)
 
 
 if __name__ == "__main__":
