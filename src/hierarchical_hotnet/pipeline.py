@@ -214,6 +214,7 @@ def run_pipeline(
     similarity_threshold: float = 1.0,
     num_digits: int = 2,
     directed: bool = False,
+    use_edge_weights: bool = False,
     log_transform: bool = False,
     score_threshold: float = float('nan'),
     lower_size_bound: float = 10.0,
@@ -255,6 +256,11 @@ def run_pipeline(
         Pinned restart probability, or ``None`` to auto-pick.
     consensus_threshold : int or None
         ``None`` skips the consensus step.
+    use_edge_weights : bool
+        When ``False`` (default), input edge weights are ignored and every
+        edge contributes weight ``1.0`` to the adjacency matrix. Set to
+        ``True`` to use the input weights (e.g. STRING confidence scores)
+        in the diffusion. See :func:`compute_similarity_matrix` for details.
     workdir : Path or None
         If set, every artifact is written under this directory (see module
         docstring for the layout). The fan-out artifacts (permuted scores and
@@ -304,6 +310,7 @@ def run_pipeline(
             beta=beta,
             threshold=similarity_threshold,
             num_digits=num_digits,
+            use_edge_weights=use_edge_weights,
         )
         if workdir is not None:
             save_matrix(str(sim_path), similarity_matrix)

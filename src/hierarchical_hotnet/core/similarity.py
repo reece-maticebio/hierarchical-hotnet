@@ -35,13 +35,22 @@ def edges_to_adjacency(edges, directed=False):
     return A
 
 
-def compute_similarity_matrix(edges, *, directed=False, beta=None, threshold=1.0, num_digits=2):
+def compute_similarity_matrix(
+    edges,
+    *,
+    directed=False,
+    beta=None,
+    threshold=1.0,
+    num_digits=2,
+    use_edge_weights=False,
+):
     """Compute the Hierarchical HotNet similarity matrix.
 
     Parameters
     ----------
     edges : iterable of (i, j, w)
-        Weighted edge list (1-indexed) as returned by :func:`load_edge_list`.
+        Edge list (1-indexed) as returned by :func:`load_edge_list`. The
+        ``w`` component is only consumed if ``use_edge_weights=True``.
     directed : bool
         Treat the graph as directed.
     beta : float or None
@@ -51,6 +60,13 @@ def compute_similarity_matrix(edges, *, directed=False, beta=None, threshold=1.0
         Threshold for edge weights when choosing beta.
     num_digits : int
         Precision (digits) used in the beta search.
+    use_edge_weights : bool
+        When ``False`` (default), every edge contributes weight ``1.0`` to
+        the adjacency matrix regardless of the third component of the input
+        tuples. This matches the canonical Hierarchical HotNet methodology,
+        which assumes an unweighted topology and lets the diffusion produce
+        the per-edge "closeness" weights. Set to ``True`` to use the input
+        weights directly (e.g. for STRING confidence-weighted networks).
 
     Returns
     -------
@@ -60,6 +76,11 @@ def compute_similarity_matrix(edges, *, directed=False, beta=None, threshold=1.0
         Restart probability actually used.
     """
     edges = list(edges)
+    if not use_edge_weights:
+        # Force every edge to weight 1.0. This is a no-op when the input
+        # already has unit weights (e.g. a 2-column edge-list file read by
+        # load_edge_list, which defaults weights to 1).
+        edges = [(e[0], e[1], 1.0) for e in edges]
     A = edges_to_adjacency(edges, directed=directed)
     if beta is None:
         beta = balanced_beta(A, threshold=threshold, num_digits=num_digits)

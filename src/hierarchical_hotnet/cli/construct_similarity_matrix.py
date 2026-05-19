@@ -12,6 +12,10 @@ def get_parser():
     parser.add_argument('-b', '--beta', type=float, required=False, help='Restart probability beta')
     parser.add_argument('-nd', '--num_digits', type=int, required=False, default=2, help='Number of digits in beta')
     parser.add_argument('-t', '--threshold', type=float, required=False, default=1.0, help='Threshold for edge weights')
+    parser.add_argument('-uew', '--use_edge_weights', action='store_true',
+                        help='Use the weight column from the input edge list. By default '
+                             'every edge contributes weight 1.0 to the adjacency, matching '
+                             'the canonical Hierarchical HotNet methodology.')
     parser.add_argument('-n', '--name', type=str, required=False, default='PPR', help='Similarity matrix name')
     parser.add_argument('-o', '--output_file', type=str, required=False, help='Similarity matrix output filename')
     parser.add_argument('-bof', '--beta_output_file', type=str, required=False, help='Beta output filename')
@@ -20,7 +24,11 @@ def get_parser():
 
 def run(args):
     edges = load_edge_list(args.edge_list_file)
-    P, beta = compute_similarity_matrix(edges, directed=args.directed, beta=args.beta, threshold=args.threshold, num_digits=args.num_digits)
+    P, beta = compute_similarity_matrix(
+        edges, directed=args.directed, beta=args.beta,
+        threshold=args.threshold, num_digits=args.num_digits,
+        use_edge_weights=args.use_edge_weights,
+    )
     if args.output_file is not None:
         save_matrix(args.output_file, P, args.name)
     if args.beta_output_file is not None:
