@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
-import math, numpy as np
+import math, warnings
+import numpy as np
 
 ####################################################################################################################################
 #
@@ -59,6 +60,65 @@ def hh_similarity_matrix(A, beta):
     Construct the Hierarchical HotNet similarity matrix.
     '''
     return hotnet2_similarity_matrix(A, beta)
+
+def drop_isolated_nodes(edges, index_to_gene):
+    """Remove nodes that appear in no edge, re-indexing to stay consecutive.
+
+    Hierarchical HotNet cannot handle isolated nodes: a node with no edges
+    produces an all-zero row/column in the similarity matrix, which the
+    downstream strongly-connected-component code chokes on. The integer
+    indices must also be consecutive ``1..N``. This function enforces both —
+    any index in ``index_to_gene`` absent from every edge is dropped, and if
+    anything was dropped the survivors are renumbered ``1..M`` so the indices
+    stay gap-free.
+
+    Parameters
+    ----------
+    edges : iterable of (i, j) or (i, j, w)
+        Edge list with integer endpoints. Tuple arity is preserved.
+    index_to_gene : Mapping[int, str]
+
+    Returns
+    -------
+    (edges, index_to_gene) : tuple
+        The cleaned edge list and a dict copy of ``index_to_gene``. When
+        there are no isolated nodes, both are returned unchanged (the edge
+        list as a fresh list, the mapping as a fresh dict).
+
+    Warns
+    -----
+    UserWarning
+        Names how many isolated nodes were removed (and which genes), if any.
+    """
+    edges = list(edges)
+
+    connected = set()
+    for edge in edges:
+        connected.add(edge[0])
+        connected.add(edge[1])
+
+    isolated = [idx for idx in index_to_gene if idx not in connected]
+    if not isolated:
+        return edges, dict(index_to_gene)
+
+    isolated_genes = sorted(str(index_to_gene[idx]) for idx in isolated)
+    shown = ", ".join(isolated_genes[:10])
+    if len(isolated_genes) > 10:
+        shown += f", ... (+{len(isolated_genes) - 10} more)"
+    warnings.warn(
+        f"Removed {len(isolated)} isolated node(s) with no edges: {shown}. "
+        "Isolated nodes cannot belong to any cluster and would produce "
+        "all-zero rows in the similarity matrix.",
+        stacklevel=2,
+    )
+
+    surviving = sorted(idx for idx in index_to_gene if idx in connected)
+    old_to_new = {old: new for new, old in enumerate(surviving, start=1)}
+
+    new_index_to_gene = {new: index_to_gene[old] for old, new in old_to_new.items()}
+    new_edges = [(old_to_new[e[0]], old_to_new[e[1]], *e[2:]) for e in edges]
+    return new_edges, new_index_to_gene
+
 
 def combined_similarity_matrix(P, gene_to_index, gene_to_score):
     '''

@@ -3,6 +3,7 @@
 __version__ = "0.2.0"
 
 from hierarchical_hotnet.core.similarity import compute_similarity_matrix
+from hierarchical_hotnet.core.common import drop_isolated_nodes
 from hierarchical_hotnet.core.bins import compute_permutation_bins
 from hierarchical_hotnet.core.permute_scores import permute_scores, permute_scores_many
 from hierarchical_hotnet.core.permute_network import permute_network, permute_network_many
@@ -40,6 +41,7 @@ __all__ = [
     "__version__",
     # building blocks
     "compute_similarity_matrix",
+    "drop_isolated_nodes",
     "compute_permutation_bins",
     "permute_scores",
     "permute_scores_many",

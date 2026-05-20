@@ -32,6 +32,7 @@ import numpy as np
 
 from hierarchical_hotnet.core.hierarchy import construct_hierarchies
 from hierarchical_hotnet.core.similarity import compute_similarity_matrix
+from hierarchical_hotnet.core.common import drop_isolated_nodes
 from hierarchical_hotnet.file_io import load_matrix, save_matrix
 from hierarchical_hotnet.core.bins import compute_permutation_bins
 from hierarchical_hotnet.core.consensus import (
@@ -293,6 +294,10 @@ def run_pipeline(
         workdir.mkdir(parents=True, exist_ok=True)
 
     edges = list(edges)
+
+    # Drop nodes with no edges: they cannot belong to any cluster and would
+    # produce all-zero rows in the similarity matrix. Re-indexes if needed.
+    edges, index_to_gene = drop_isolated_nodes(edges, index_to_gene)
 
     # 1. Similarity matrix --------------------------------------------------
     sim_path = workdir / "similarity_matrix.h5" if workdir else None
