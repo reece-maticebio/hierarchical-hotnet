@@ -83,7 +83,7 @@ def permute_scores_many(gene_to_score, bins=None, *, seeds, n_jobs=1, out: Optio
     if out is None:
         if n_jobs == 1:
             return [permute_scores(gene_to_score, bins, seed=s) for s in seeds]
-        with maybe_pool(n_jobs, initializer=_init_worker, initargs=(gene_to_score, bins)) as map_fn:
+        with maybe_pool(n_jobs, initializer=_init_worker, initargs=(gene_to_score, bins), stage="permute_scores") as map_fn:
             return list(map_fn(_worker, seeds))
 
     # Streaming path: drain the (lazy) map iterator into the store one result
@@ -92,7 +92,7 @@ def permute_scores_many(gene_to_score, bins=None, *, seeds, n_jobs=1, out: Optio
         for seed in seeds:
             out.put(str(seed), permute_scores(gene_to_score, bins, seed=seed))
     else:
-        with maybe_pool(n_jobs, initializer=_init_worker, initargs=(gene_to_score, bins)) as map_fn:
+        with maybe_pool(n_jobs, initializer=_init_worker, initargs=(gene_to_score, bins), stage="permute_scores") as map_fn:
             for seed, result in zip(seeds, map_fn(_worker, seeds)):
                 out.put(str(seed), result)
     return out
