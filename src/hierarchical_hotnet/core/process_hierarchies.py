@@ -2,10 +2,12 @@
 
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
 import numpy as np
 from hierarchical_hotnet import backends
 from hierarchical_hotnet.file_io import load_edge_list, load_index_gene
+from hierarchical_hotnet.parallel.oom import OomProbe, worker_failure_error
 
 
 def compute_statistic(sizes):
@@ -176,9 +178,12 @@ def process_hierarchies(observed_hierarchy, observed_index_to_gene, permuted_hie
         yield (observed_hierarchy, observed_index_to_gene)
         yield from zip(permuted_hierarchies, permuted_index_to_gene_list)
 
+    probe = OomProbe()
     map_fn, cleanup = _resolve_map(n_jobs)
     try:
         stats_output = list(map_fn(_statistics_worker, _stats_input()))
+    except (BrokenProcessPool, MemoryError) as exc:
+        raise worker_failure_error(n_jobs, "process_hierarchies", exc, probe) from exc
     finally:
         cleanup()
     observed_heights, observed_sizes = stats_output[0]
@@ -189,6 +194,8 @@ def process_hierarchies(observed_hierarchy, observed_index_to_gene, permuted_hie
         cut_input = [(observed_heights, observed_sizes, distinct_heights, expected_sizes, lower_size_bound, upper_size_bound)]
         cut_input += [(permuted_heights, permuted_sizes, distinct_heights, expected_sizes, lower_size_bound, upper_size_bound) for permuted_heights, permuted_sizes in zip(permuted_heights_collection, permuted_sizes_collection)]
         cut_output = list(map_fn(_find_cut_worker, cut_input))
+    except (BrokenProcessPool, MemoryError) as exc:
+        raise worker_failure_error(n_jobs, "process_hierarchies", exc, probe) from exc
     finally:
         cleanup()
     observed_cut_height, observed_cut_ratio = cut_output[0]

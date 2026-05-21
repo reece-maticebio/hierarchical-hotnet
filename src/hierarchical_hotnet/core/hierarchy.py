@@ -4,7 +4,11 @@ import math
 from typing import Optional
 
 import numpy as np
-from hierarchical_hotnet.parallel import maybe_pool
+from hierarchical_hotnet.parallel import (
+    attach_shared_ndarray,
+    maybe_pool,
+    shared_ndarray,
+)
 from hierarchical_hotnet.core.common import combined_similarity_matrix
 from hierarchical_hotnet.core.clustering import strongly_connected_components, tarjan_HD
 from hierarchical_hotnet.storage import Store
@@ -66,8 +70,14 @@ def construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=None, *,
 _state: dict = {}
 
 
-def _init_worker(similarity_matrix, index_to_gene, log_transform, score_threshold):
+def _init_worker(matrix_spec, index_to_gene, log_transform, score_threshold):
+    # Map the shared similarity matrix read-only instead of receiving a
+    # per-worker pickled copy. The SharedMemory handle is kept in _state so
+    # its backing buffer stays valid for the worker's lifetime -- dropping it
+    # would unmap the buffer and invalidate the array.
+    similarity_matrix, shm = attach_shared_ndarray(matrix_spec)
     _state['similarity_matrix'] = similarity_matrix
+    _state['_shm'] = shm
     _state['index_to_gene'] = index_to_gene
     _state['log_transform'] = log_transform
     _state['score_threshold'] = score_threshold
@@ -97,9 +107,11 @@ def construct_hierarchies(
     gene_to_score_sets : iterable of Mapping[str, float] or None
         One hierarchy is built per element; ``None`` elements use unit scores.
     n_jobs : int
-        ``1`` runs serially. ``-1`` lets the pool pick worker count. The pool
-        pickles ``similarity_matrix`` once per worker (via ``initializer``)
-        rather than once per task.
+        ``1`` runs serially. ``-1`` lets the pool pick worker count. For a
+        pool, ``similarity_matrix`` is placed in shared memory and mapped
+        read-only by every worker (one physical copy total) rather than
+        pickled per worker -- see
+        :mod:`hierarchical_hotnet.parallel.sharedmem`.
     out : Store, optional
         If provided, each ``(T, common_index_to_gene)`` tuple is written into
         ``out`` keyed by its position in the input (``"0"``, ``"1"``, ...) and
@@ -127,7 +139,17 @@ def construct_hierarchies(
                 construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=gs, log_transform=log_transform, score_threshold=score_threshold)
                 for gs in sets
             ]
-        with maybe_pool(n_jobs, initializer=_init_worker, initargs=(similarity_matrix, index_to_gene, log_transform, score_threshold)) as map_fn:
+        # Place the matrix in shared memory so the pool maps one physical
+        # copy instead of pickling it once per worker. shared_ndarray wraps
+        # (and so outlives) the pool, so the segment is unlinked only after
+        # every worker has detached.
+        with shared_ndarray(similarity_matrix) as matrix_spec, \
+                maybe_pool(
+                    n_jobs,
+                    initializer=_init_worker,
+                    initargs=(matrix_spec, index_to_gene, log_transform, score_threshold),
+                    stage="construct_hierarchies",
+                ) as map_fn:
             return list(map_fn(_worker, sets))
 
     if keys is None:
@@ -141,7 +163,13 @@ def construct_hierarchies(
         for k, gs in zip(keys, sets):
             out.put(k, construct_hierarchy(similarity_matrix, index_to_gene, gene_to_score=gs, log_transform=log_transform, score_threshold=score_threshold))
     else:
-        with maybe_pool(n_jobs, initializer=_init_worker, initargs=(similarity_matrix, index_to_gene, log_transform, score_threshold)) as map_fn:
+        with shared_ndarray(similarity_matrix) as matrix_spec, \
+                maybe_pool(
+                    n_jobs,
+                    initializer=_init_worker,
+                    initargs=(matrix_spec, index_to_gene, log_transform, score_threshold),
+                    stage="construct_hierarchies",
+                ) as map_fn:
             for k, result in zip(keys, map_fn(_worker, sets)):
                 out.put(k, result)
     return out
