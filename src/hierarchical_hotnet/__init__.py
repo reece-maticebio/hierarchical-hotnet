@@ -1,6 +1,6 @@
 """Hierarchical HotNet: identifying hierarchies of altered subnetworks."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from hierarchical_hotnet.core.similarity import compute_similarity_matrix
 from hierarchical_hotnet.core.common import drop_isolated_nodes

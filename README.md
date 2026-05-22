@@ -23,12 +23,18 @@ Hierarchical HotNet is installable as a Python package. The Fortran extension is
 Runtime dependencies (`numpy`, `scipy`, `networkx`, `h5py`) are installed automatically. `matplotlib` is an optional extra used by the plotting steps.
 
 ### Install
-Clone the repository and install with `pip`:
+Install directly from the repository with `pip`, pinned to the latest release:
 
-    git clone https://github.com/raphael-group/hierarchical-hotnet.git
+    pip install "hierarchical-hotnet @ git+https://github.com/reece-maticebio/hierarchical-hotnet.git@v0.3.0"
+    pip install "hierarchical-hotnet[plot] @ git+https://github.com/reece-maticebio/hierarchical-hotnet.git@v0.3.0"   # with matplotlib for plotting
+
+Drop the `@v0.3.0` suffix to install the current `master` instead of a tagged release.
+
+To work on the package itself, clone it and install in editable mode:
+
+    git clone https://github.com/reece-maticebio/hierarchical-hotnet.git
     cd hierarchical-hotnet
-    pip install .            # core install
-    pip install '.[plot]'    # with matplotlib for plotting
+    pip install -e '.[plot]'
 
 Installation exposes both a Python module (`import hierarchical_hotnet as hhn`) and a single CLI entry point (`hhnet`) with subcommands for each pipeline step (listed below; see `hhnet --help`). If no Fortran compiler is found at build time the install still succeeds and the package falls back to the pure-Python implementation, which is slower but otherwise equivalent.
 

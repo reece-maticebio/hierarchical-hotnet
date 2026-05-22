@@ -9,7 +9,7 @@ build-backend = "mesonpy"
 
 [project]
 name = "hierarchical-hotnet"
-version = "0.2.0"
+version = "0.3.0"
 description = "Hierarchical HotNet: identifying hierarchies of altered subnetworks."
 readme = "README.md"
 license = { file = "LICENSE.txt" }
